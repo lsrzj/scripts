@@ -2,36 +2,46 @@
 
 IFS=""
 
-echo "This script searches for WhatsApp pictures and videos in the specified search path and moves them to"
-echo "$HOME/Pictures/WhatsApp/[year]/[month] based on it's filenames to put them separated by year and month"
-read -e -p "Enter the path you want to search WhatsApp media: " findPath
+echo "This script searches for WhatsApp and Android camera pictures and videos in the specified search path and moves them to"
+echo "$HOME/Pictures/[WhatsApp?]/[year]/[month]/[Videos?] based on it's filenames to put them separated by year and month"
+read -e -p "Enter the path you want to search for media: " findPath
 
-find "$findPath" -regextype sed -regex '.*IMG-[0-9]\{8\}-WA[0-9]\{4\}.*' \
-| \
-while read path
-do
-    filename=$(basename "$path")
-    year=${filename:4:4}
-    month=${filename:8:2}
-    if [ ! -e $HOME/Pictures/WhatsApp/$year/$month ]
-    then
-        mkdir -p $HOME/Pictures/WhatsApp/$year/$month
-    fi
-    mv "$path" $HOME/Pictures/WhatsApp/$year/$month
-    echo Moving $path to $HOME/Pictures/WhatsApp/$year/$month
-done
+declare -a patterns=(".*IMG-[0-9]\{8\}-WA[0-9]\{4\}.*" ".*VID-[0-9]\{8\}-WA[0-9]\{4\}.*" ".*IMG_[0-9]\{8\}_[0-9]\{6\}.*" ".*VID_[0-9]\{8\}_[0-9]\{6\}.*" ".*PANO_[0-9]\{8\}_[0-9]\{6\}.*")
 
-find "$findPath" -regextype sed -regex '.*VID-[0-9]\{8\}-WA[0-9]\{4\}.*' \
-| \
-while read path
+for pattern in "${patterns[@]}"
 do
-    filename=$(basename "$path")
-    year=${filename:4:4}
-    month=${filename:8:2}
-    if [ ! -e $HOME/Pictures/WhatsApp/$year/$month/Videos ]
-    then
-        mkdir -p $HOME/Pictures/WhatsApp/$year/$month/Videos
-    fi
-    mv "$path" $HOME/Pictures/WhatsApp/$year/$month/Videos
-    echo Moving $path to $HOME/Pictures/WhatsApp/$year/$month/Videos
+    find "$findPath" -regextype sed -regex "$pattern" \
+    |while read path
+    do
+        if [[ $path != *"Instagram"* ]]
+        then
+            filename=$(basename "$path")
+            year=${filename:4:4}
+            month=${filename:8:2}
+            if [[ "$pattern" == ".*IMG-[0-9]\{8\}-WA[0-9]\{4\}.*" ]]
+            then
+                movePath=$HOME/Pictures/WhatsApp/$year/$month
+            elif [[ "$pattern" == ".*VID-[0-9]\{8\}-WA[0-9]\{4\}.*" ]]
+            then
+                movePath=$HOME/Pictures/WhatsApp/$year/$month/Videos
+            elif [[ "$pattern" == ".*IMG_[0-9]\{8\}_[0-9]\{6\}.*" ]]
+            then
+                movePath=$HOME/Pictures/$year/$month
+            elif [[ "$pattern" == ".*VID_[0-9]\{8\}_[0-9]\{6\}.*" ]]
+            then
+                movePath=$HOME/Pictures/$year/$month/Videos
+            elif [[ "$pattern" == ".*PANO_[0-9]\{8\}_[0-9]\{6\}.*" ]]
+                year=${filename:5:4}
+                month=${filename:9:2}
+                movePath=$HOME/Pictures/$year/$month
+            fi
+
+            if [ ! -e $movePath ]
+            then
+                mkdir -p $movePath
+            fi
+            echo Moving $path to $movePath
+            mv "$path" $movePath
+        fi
+    done
 done
